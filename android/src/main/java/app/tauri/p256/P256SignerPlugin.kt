@@ -37,12 +37,11 @@ class P256SignerPlugin(private val activity: Activity): Plugin(activity) {
         // todo: error handling and try catch / check for google services
         val invokeParams = invoke.parseArgs(CreateCredentialRequestParams::class.java)
         if (isRequesting) return
-        isRequesting = true // block request if it's already there
+        isRequesting = true
         scope.launch {
             val request = CreatePublicKeyCredentialRequest(invokeParams.creationParams)
             val response = credentialManager.createCredential(activity, request)
             val pubkeyResponse = response as? CreatePublicKeyCredentialResponse
-            // It's an object serialized as string
             invoke.resolveObject(PubKeyResponse(pubkeyResponse!!.registrationResponseJson))
             isRequesting = false
         }

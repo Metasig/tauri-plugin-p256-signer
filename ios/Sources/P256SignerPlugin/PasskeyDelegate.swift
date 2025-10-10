@@ -75,10 +75,16 @@ class PasskeyDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizat
             handler.onFailure(ASAuthorizationError(.invalidResponse))
             return
         }
-        
+
+        // Extract public key
+        let publicKey = getPublicKey(from: attestationObject)?.toBase64URLEncodedString()
+
         // Create response with all required fields
         var response = AuthenticatorAttestationResponseJSON()
         response.clientDataJSON = credential.rawClientDataJSON.toBase64URLEncodedString()
+        if let publicKey = publicKey {
+          response.publicKey = publicKey
+        }
         response.attestationObject = attestationObject.toBase64URLEncodedString()
         
         // Create the full registration response
@@ -98,10 +104,16 @@ class PasskeyDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizat
             handler.onFailure(ASAuthorizationError(.invalidResponse))
             return
         }
-        
+
+        // Extract public key
+        let publicKey = getPublicKey(from: attestationObject)?.toBase64URLEncodedString()
+
         // Create response with all required fields
         var response = AuthenticatorAttestationResponseJSON()
         response.clientDataJSON = credential.rawClientDataJSON.toBase64URLEncodedString()
+        if let publicKey = publicKey {
+          response.publicKey = publicKey
+        }
         response.attestationObject = attestationObject.toBase64URLEncodedString()
         
         // Create the full registration response
@@ -168,4 +180,10 @@ class PasskeyDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizat
         
         handler.onSuccess(authResponse)
     }
+
+    // Extract public key from attestation object
+      private func getPublicKey(from attestationObject: Data) -> Data? {
+        // Use the CBOR decoder to extract the public key
+        return SimpleCBORDecoder.extractPublicKey(from: attestationObject)
+      }
 }

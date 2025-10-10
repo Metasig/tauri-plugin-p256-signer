@@ -202,7 +202,113 @@ class SimpleCBORDecoder {
     }
     
     // Helper method to extract WebAuthn public key from attestation object
+    // Extract public key in SPKI format (ready for crypto.subtle)
     static func extractPublicKey(from attestationObject: Data) -> Data? {
+        do {
+            guard let cborData = try decode(attestationObject) as? [AnyHashable: Any],
+                  let authData = cborData["authData"] as? Data else {
+                return nil
+            }
+
+            // AuthData structure:
+            // - rpIdHash (32 bytes)
+            // - flags (1 byte)
+            // - signCount (4 bytes)
+            // - attestedCredentialData (if attested credential data flag is set)
+            //   - aaguid (16 bytes)
+            //   - credentialIdLength (2 bytes)
+            //   - credentialId (credentialIdLength bytes)
+            //   - credentialPublicKey (CBOR-encoded)
+
+            // Need at least 37 bytes for header
+            if authData.count <= 37 {
+                return nil
+            }
+
+            // Check if attested credential data flag is set (bit 6)
+            let flags = authData[32]
+            let attestedCredentialDataFlag = (flags & 0x40) != 0
+
+            if !attestedCredentialDataFlag {
+                return nil
+            }
+
+            let aaguidStart = 37
+            let credentialIdLengthStart = aaguidStart + 16
+
+            if authData.count <= credentialIdLengthStart + 2 {
+                return nil
+            }
+
+            // Get credential ID length (2 bytes, big-endian)
+            let credentialIdLength = UInt16(authData[credentialIdLengthStart]) << 8 |
+            UInt16(authData[credentialIdLengthStart + 1])
+
+            let credentialIdStart = credentialIdLengthStart + 2
+            let credentialPublicKeyStart = credentialIdStart + Int(credentialIdLength)
+
+            if authData.count <= credentialPublicKeyStart {
+                return nil
+            }
+
+            // Extract the CBOR-encoded public key
+            let coseKeyData = authData.subdata(in: credentialPublicKeyStart..<authData.count)
+
+            // Decode the COSE key
+            guard let coseKey = try decode(coseKeyData) as? [AnyHashable: Any] else {
+                return nil
+            }
+
+            // Extract x and y coordinates from COSE key
+            // COSE key labels: -2 = x coordinate, -3 = y coordinate
+            guard let xCoord = coseKey[-2] as? Data,
+                  let yCoord = coseKey[-3] as? Data,
+                  xCoord.count == 32,
+                  yCoord.count == 32 else {
+                return nil
+            }
+
+            // Build SPKI (SubjectPublicKeyInfo) structure for P-256 (secp256r1)
+            // This is the DER-encoded format that crypto.subtle expects
+            var spki = Data([
+                0x30, 0x59, // SEQUENCE, length 89 bytes
+                0x30, 0x13, // SEQUENCE, length 19 bytes (AlgorithmIdentifier)
+                0x06, 0x07, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x02, 0x01, // OID: ecPublicKey (1.2.840.10045.2.1)
+                0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07, // OID: prime256v1/P-256 (1.2.840.10045.3.1.7)
+                0x03, 0x42, 0x00, // BIT STRING, length 66 bytes, 0 unused bits
+                0x04 // Uncompressed EC point indicator
+            ])
+
+            // Append x and y coordinates (32 bytes each)
+            spki.append(xCoord)
+            spki.append(yCoord)
+
+            return spki
+
+        } catch {
+            print("Error extracting public key: \(error)")
+            return nil
+        }
+    }
+    
+    // Helper method to extract authenticator data from attestation object
+    static func extractAuthenticatorData(from attestationObject: Data) -> Data? {
+        do {
+            guard let cborData = try decode(attestationObject) as? [AnyHashable: Any],
+                  let authData = cborData["authData"] as? Data else {
+                return nil
+            }
+            
+            // The authData is what we want - it's already extracted from the CBOR structure
+            return authData
+        } catch {
+            print("Error extracting authenticator data: \(error)")
+            return nil
+        }
+    }
+    
+    // More complete implementation that parses from authenticator data
+    static func extractPublicKeyAlgorithm(from attestationObject: Data) -> Int? {
         do {
             guard let cborData = try decode(attestationObject) as? [AnyHashable: Any],
                   let authData = cborData["authData"] as? Data else {
@@ -214,30 +320,19 @@ class SimpleCBORDecoder {
             // - flags (1 byte)
             // - signCount (4 bytes)
             // - attestedCredentialData (if attested credential data flag is set)
-            //   - aaguid (16 bytes)
-            //   - credentialIdLength (2 bytes)
-            //   - credentialId (credentialIdLength bytes)
-            //   - credentialPublicKey (CBOR-encoded)
             
-            // Need at least 37 bytes for header
-            if authData.count <= 37 {
-                return nil
-            }
+            guard authData.count > 37 else { return nil }
             
             // Check if attested credential data flag is set (bit 6)
             let flags = authData[32]
             let attestedCredentialDataFlag = (flags & 0x40) != 0
             
-            if !attestedCredentialDataFlag {
-                return nil
-            }
+            guard attestedCredentialDataFlag else { return nil }
             
             let aaguidStart = 37
             let credentialIdLengthStart = aaguidStart + 16
             
-            if authData.count <= credentialIdLengthStart + 2 {
-                return nil
-            }
+            guard authData.count > credentialIdLengthStart + 2 else { return nil }
             
             // Get credential ID length (2 bytes, big-endian)
             let credentialIdLength = UInt16(authData[credentialIdLengthStart]) << 8 |
@@ -246,14 +341,27 @@ class SimpleCBORDecoder {
             let credentialIdStart = credentialIdLengthStart + 2
             let credentialPublicKeyStart = credentialIdStart + Int(credentialIdLength)
             
-            if authData.count <= credentialPublicKeyStart {
+            guard authData.count > credentialPublicKeyStart else { return nil }
+            
+            // Extract the COSE-encoded public key
+            let credentialPublicKey = authData.subdata(in: credentialPublicKeyStart..<authData.count)
+            
+            // Decode the COSE key
+            guard let coseKey = try decode(credentialPublicKey) as? [AnyHashable: Any] else {
                 return nil
             }
             
-            // The remaining data is the CBOR-encoded public key
-            return authData.subdata(in: credentialPublicKeyStart..<authData.count)
+            // Extract algorithm (label 3 in COSE)
+            if let alg = coseKey[3] as? Int {
+                return alg
+            } else if let alg = coseKey[NSNumber(value: 3)] as? Int {
+                // Sometimes the key is an NSNumber
+                return alg
+            }
+            
+            return nil
         } catch {
-            print("Error extracting public key: \(error)")
+            print("Error extracting algorithm: \(error)")
             return nil
         }
     }

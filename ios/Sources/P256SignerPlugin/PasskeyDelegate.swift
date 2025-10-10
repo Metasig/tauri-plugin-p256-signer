@@ -78,6 +78,8 @@ class PasskeyDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizat
 
         // Extract public key
         let publicKey = getPublicKey(from: attestationObject)?.toBase64URLEncodedString()
+        let authenticatorData = getAuthenticatorData(from: attestationObject)?.toBase64URLEncodedString()
+        let publicKeyAlgorithm = getPublicKeyAlgorithm(from: attestationObject)
 
         // Create response with all required fields
         var response = AuthenticatorAttestationResponseJSON()
@@ -85,6 +87,13 @@ class PasskeyDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizat
         if let publicKey = publicKey {
           response.publicKey = publicKey
         }
+        if let authenticatorData = authenticatorData {
+          response.authenticatorData = authenticatorData
+        }
+        if let publicKeyAlgorithm = publicKeyAlgorithm {
+          response.publicKeyAlgorithm = publicKeyAlgorithm
+        }
+        response.transports = ["internal"] // FIXME: Support Touch ID/Face ID only for now
         response.attestationObject = attestationObject.toBase64URLEncodedString()
         
         // Create the full registration response
@@ -107,6 +116,8 @@ class PasskeyDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizat
 
         // Extract public key
         let publicKey = getPublicKey(from: attestationObject)?.toBase64URLEncodedString()
+        let authenticatorData = getAuthenticatorData(from: attestationObject)?.toBase64URLEncodedString()
+        let publicKeyAlgorithm = getPublicKeyAlgorithm(from: attestationObject)
 
         // Create response with all required fields
         var response = AuthenticatorAttestationResponseJSON()
@@ -114,6 +125,13 @@ class PasskeyDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizat
         if let publicKey = publicKey {
           response.publicKey = publicKey
         }
+        if let authenticatorData = authenticatorData {
+          response.authenticatorData = authenticatorData
+        }
+        if let publicKeyAlgorithm = publicKeyAlgorithm {
+          response.publicKeyAlgorithm = publicKeyAlgorithm
+        }
+        response.transports = ["usb", "nfc", "ble"]
         response.attestationObject = attestationObject.toBase64URLEncodedString()
         
         // Create the full registration response
@@ -182,8 +200,22 @@ class PasskeyDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizat
     }
 
     // Extract public key from attestation object
-      private func getPublicKey(from attestationObject: Data) -> Data? {
-        // Use the CBOR decoder to extract the public key
-        return SimpleCBORDecoder.extractPublicKey(from: attestationObject)
-      }
+    private func getPublicKey(from attestationObject: Data) -> Data? {
+      // Use the CBOR decoder to extract the public key
+      return SimpleCBORDecoder.extractPublicKey(from: attestationObject)
+    }
+
+    // Extract authenticatorData from attestation object
+    private func getAuthenticatorData(from attestationObject: Data) -> Data? {
+      // Use the CBOR decoder to extract the authenticator data
+      return SimpleCBORDecoder.extractAuthenticatorData(from: attestationObject)
+    }
+
+    // Extract authenticatorData from attestation object
+    private func getPublicKeyAlgorithm(from attestationObject: Data) -> Int? {
+      // Use the CBOR decoder to extract the authenticator data
+      return SimpleCBORDecoder.extractPublicKeyAlgorithm(from: attestationObject)
+    }
+
+
 }

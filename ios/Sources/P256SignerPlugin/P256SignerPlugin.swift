@@ -297,8 +297,11 @@ class P256SignerPlugin: Plugin, PasskeyResultHandler {
                 // Create response dictionary
                 var responseObjDict: [String: Any] = [:]
                 
+                if let authenticatorData = registrationData.response?.authenticatorData {
+                    responseObjDict["authenticatorData"] = authenticatorData
+                }
                 if let clientDataJSON = registrationData.response?.clientDataJSON {
-                    responseDict["clientDataJSON"] = clientDataJSON
+                    responseObjDict["clientDataJSON"] = clientDataJSON
                 }
                 
                 if let attestationObject = registrationData.response?.attestationObject {
@@ -337,15 +340,15 @@ class P256SignerPlugin: Plugin, PasskeyResultHandler {
                 var responseObjDict: [String: Any] = [:]
                 
                 if let authenticatorData = authData.response?.authenticatorData {
-                    responseDict["authenticatorData"] = authenticatorData
+                    responseObjDict["authenticatorData"] = authenticatorData
                 }
                 
                 if let clientDataJSON = authData.response?.clientDataJSON {
-                    responseDict["clientDataJSON"] = clientDataJSON
+                    responseObjDict["clientDataJSON"] = clientDataJSON
                 }
                 
                 if let signature = authData.response?.signature {
-                    responseDict["signature"] = signature
+                    responseObjDict["signature"] = signature
                 }
                 
                 if let userHandle = authData.response?.userHandle {
@@ -363,7 +366,7 @@ class P256SignerPlugin: Plugin, PasskeyResultHandler {
             let jsonData = try JSONSerialization.data(withJSONObject: json, options: [])
             
             if let jsonString = String(data: jsonData, encoding: .utf8) {
-                delegate.promise?.resolve(["pubKeyJson",jsonString])
+                delegate.promise?.resolve(["pubKeyJson": jsonString])
             } else {
                 throw P256SignerError.runtimeError("UnknownException")
             }

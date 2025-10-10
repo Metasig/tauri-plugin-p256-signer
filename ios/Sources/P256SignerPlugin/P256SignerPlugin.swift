@@ -335,7 +335,7 @@ class P256SignerPlugin: Plugin, PasskeyResultHandler {
                 
                 // Create response dictionary
                 var responseObjDict: [String: Any] = [:]
-
+                
                 if let authenticatorData = authData.response?.authenticatorData {
                     responseDict["authenticatorData"] = authenticatorData
                 }
@@ -363,7 +363,7 @@ class P256SignerPlugin: Plugin, PasskeyResultHandler {
             let jsonData = try JSONSerialization.data(withJSONObject: json, options: [])
             
             if let jsonString = String(data: jsonData, encoding: .utf8) {
-                delegate.promise?.resolve(jsonString)
+                delegate.promise?.resolve(["pubKeyJson",jsonString])
             } else {
                 throw P256SignerError.runtimeError("UnknownException")
             }
@@ -387,7 +387,25 @@ class P256SignerPlugin: Plugin, PasskeyResultHandler {
             case .canceled:
                 delegate.promise?.reject("UserCancelledException")
             case .failed:
-                delegate.promise?.reject("PasskeyRequestFailedException")
+                // Get detailed error information
+                let errorMessage = asError.localizedDescription
+                let errorCode = asError.code.rawValue
+                let underlyingError = asError.userInfo[NSUnderlyingErrorKey] as? Error
+                
+                // Create detailed error message
+                var details = "ASAuthorizationError-PasskeyRequestFailedException"
+                details += " | Code: \(errorCode)"
+                details += " | Message: \(errorMessage)"
+                
+                if let underlying = underlyingError {
+                    details += " | Underlying: \(underlying.localizedDescription)"
+                }
+                
+                // Log for debugging
+                print("Full error info: \(asError)")
+                print("UserInfo: \(asError.userInfo)")
+                
+                delegate.promise?.reject(details)
             case .invalidResponse:
                 delegate.promise?.reject("PasskeyAuthorizationFailedException")
             default:

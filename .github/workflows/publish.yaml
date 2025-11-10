@@ -36,3 +36,4 @@ jobs:
         run: pnpm publish --access restricted --publish-branch main --tag next
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+gst

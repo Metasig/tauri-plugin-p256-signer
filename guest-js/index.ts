@@ -49,9 +49,29 @@ function serializeWebAuthnCredential(credentialRequest: PublicKeyCredentialCreat
     }
 
     if (credentialRequest.extensions) {
-        serialized.extensions = credentialRequest.extensions;
+        serialized.extensions = serializeExtensions(credentialRequest.extensions);
     }
 
+    return serialized;
+}
+
+function serializeExtensions(extensions: AuthenticationExtensionsClientInputs): AuthenticationExtensionsClientInputsJSON {
+    const serialized: any = {};
+    
+    if (extensions.largeBlob) {
+        serialized.largeBlob = {
+            ...extensions.largeBlob,
+            write: extensions.largeBlob.write ? bufferToBase64Url(extensions.largeBlob.write as ArrayBuffer) : undefined
+        };
+    }
+    
+    // Copy other extension properties as-is
+    for (const [key, value] of Object.entries(extensions)) {
+        if (key !== 'largeBlob') {
+            serialized[key] = value;
+        }
+    }
+    
     return serialized;
 }
 

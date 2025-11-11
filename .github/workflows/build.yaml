@@ -1,0 +1,19 @@
+name: build
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  cargo_build:
+    name: cargo build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: apt-get install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev
+      - run: cargo build

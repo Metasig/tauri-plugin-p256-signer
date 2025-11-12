@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-p256-signer"
-version = "0.3.0"
+version = "0.3.1"
 authors = [ "0x330a" ]
 description = "JS Bindings for the tauri-plugin-p256-signer Tauri plugin"
 edition = "2021"

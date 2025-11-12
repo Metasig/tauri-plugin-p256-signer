@@ -134,14 +134,11 @@ class P256SignerPlugin: Plugin, PasskeyResultHandler {
             let platformProvider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: options.rp.id)
             let platformRequest = platformProvider.createCredentialRegistrationRequest(
                 challenge: challenge,
+                displayName: options.user.displayName,
                 name: options.user.name,
                 userID: userId
             )
 
-            if let displayName = options.user.displayName {
-                platformRequest.displayName = displayName
-            }
-            
             if let userVerification = options.authenticatorSelection?.userVerification {
                 platformRequest.userVerificationPreference = convertUserVerificationPreference(userVerification)
             }

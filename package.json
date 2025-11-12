@@ -36,6 +36,6 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Metasig/tauri-plugin-keystore.git"
+    "url": "git+https://github.com/Metasig/tauri-plugin-p256-signer.git"
   }
 }

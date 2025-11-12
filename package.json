@@ -1,6 +1,6 @@
 {
   "name": "@metasig/tauri-plugin-p256-signer-api",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "author": "0x330a",
   "description": "JS Bindings for the tauri-plugin-p256-signer Tauri plugin",
   "type": "module",

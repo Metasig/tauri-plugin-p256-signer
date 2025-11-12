@@ -1,6 +1,6 @@
 {
-  "name": "@0x330a/tauri-plugin-p256-signer-api",
-  "version": "0.1.2",
+  "name": "@metasig/tauri-plugin-p256-signer-api",
+  "version": "0.3.1",
   "author": "0x330a",
   "description": "JS Bindings for the tauri-plugin-p256-signer Tauri plugin",
   "type": "module",
@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^11.1.6",
+    "@types/node": "^24.10.0",
     "rollup": "^4.9.6",
     "typescript": "^5.8",
     "tslib": "^2.6.2"
